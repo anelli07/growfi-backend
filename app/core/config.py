@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     # CORS settings
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    DATABASE_URL: str
 
     # Database settings
     POSTGRES_SERVER: str
