@@ -1,5 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict, List
+from datetime import datetime
+import random
 
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import BaseModel, EmailStr
@@ -63,5 +65,21 @@ async def send_verification_email(
         recipients=[email_to],
         subject=subject,
         template_name="verify_email.html",
+        template_body=template_body,
+    )
+
+
+async def send_verification_code_email(email_to: EmailStr, full_name: str, code: str):
+    project_name = settings.MAIL_FROM_NAME
+    subject = f"{project_name} - Код подтверждения регистрации"
+    template_body = {
+        "full_name": full_name,
+        "code": code,
+        "project_name": project_name,
+    }
+    await send_email(
+        recipients=[email_to],
+        subject=subject,
+        template_name="verify_email.html",  # Можно сделать отдельный шаблон, если нужно
         template_body=template_body,
     )

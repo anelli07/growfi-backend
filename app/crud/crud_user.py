@@ -1,6 +1,8 @@
 # from typing import Any, Dict, Optional, Union
 from typing import Optional
 import uuid
+import random
+from datetime import datetime, timedelta
 
 from sqlmodel import Session
 from app.core.security import get_password_hash, verify_password
@@ -17,12 +19,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(User).filter(User.google_id == google_id).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
-        verification_token = uuid.uuid4().hex
+        code = str(random.randint(100000, 999999))
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             full_name=obj_in.full_name,
-            email_verification_token=verification_token,
+            email_verification_code=code,
+            email_verification_code_sent_at=datetime.utcnow(),
         )
         db.add(db_obj)
         db.commit()
@@ -70,6 +73,33 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db.commit()
         db.refresh(user)
         return user
+
+    def verify_email_code(self, db: Session, *, email: str, code: str) -> bool:
+        user = self.get_by_email(db, email=email)
+        if not user or user.email_verification_code != code:
+            return False
+        # 10 минут на ввод кода
+        if (datetime.utcnow() - user.email_verification_code_sent_at).total_seconds() > 600:
+            return False
+        user.is_email_verified = True
+        user.email_verification_code = None
+        user.email_verification_code_sent_at = None
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return True
+
+    def resend_verification_code(self, db: Session, *, email: str) -> Optional[str]:
+        user = self.get_by_email(db, email=email)
+        if not user:
+            return None
+        code = str(random.randint(100000, 999999))
+        user.email_verification_code = code
+        user.email_verification_code_sent_at = datetime.utcnow()
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return code
 
 
 user = CRUDUser(User)

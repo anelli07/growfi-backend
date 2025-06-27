@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, List, Optional
 from sqlmodel import Field, Relationship, SQLModel
+from datetime import datetime
 
 if TYPE_CHECKING:
     from .category import Category
@@ -21,6 +22,8 @@ class User(UserBase, table=True):
     hashed_password: Optional[str] = Field(default=None)  # Optional for Google Sign-In
     email_verification_token: Optional[str] = Field(default=None, index=True)
     refresh_token: Optional[str] = Field(default=None, index=True)
+    email_verification_code: Optional[str] = Field(default=None, index=True)
+    email_verification_code_sent_at: Optional[datetime] = Field(default=None)
 
     # Relationships
     categories: List["Category"] = Relationship(back_populates="user")

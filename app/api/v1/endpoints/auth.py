@@ -4,13 +4,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from pydantic import BaseModel, EmailStr
 
 from app import crud, schemas
 from app.api import deps
 from app.core import security
 from app.core.config import settings
 from app.schemas.token import GoogleToken
-from app.services.email_service import send_verification_email
+from app.services.email_service import send_verification_email, send_verification_code_email
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ async def register_user(
     user_in: schemas.UserCreate,
 ) -> Any:
     """
-    Create new user and send verification email.
+    Create new user and send verification code.
     """
     user = crud.user.get_by_email(db, email=user_in.email)
     if user:
@@ -31,10 +32,10 @@ async def register_user(
             detail="The user with this username already exists in the system.",
         )
     user = crud.user.create(db, obj_in=user_in)
-    await send_verification_email(
+    await send_verification_code_email(
         email_to=user.email,
-        full_name=user.full_name,
-        verification_token=user.email_verification_token,
+        full_name=user.full_name or user.email,
+        code=user.email_verification_code,
     )
     return user
 
@@ -115,3 +116,43 @@ def auth_google(
         "refresh_token": security.create_refresh_token(user.id),
         "token_type": "bearer",
     }
+
+
+class EmailCodeVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+@router.post("/verify-code")
+def verify_code(
+    data: EmailCodeVerifyRequest,
+    db: Session = Depends(deps.get_db),
+) -> Any:
+    """
+    Verify user's email by code.
+    """
+    ok = crud.user.verify_email_code(db, email=data.email, code=data.code)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Неверный или истёкший код")
+    return {"message": "Email подтверждён"}
+
+
+class ResendCodeRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/resend-code")
+async def resend_code(
+    data: ResendCodeRequest,
+    db: Session = Depends(deps.get_db),
+) -> Any:
+    user = crud.user.get_by_email(db, email=data.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    code = crud.user.resend_verification_code(db, email=data.email)
+    await send_verification_code_email(
+        email_to=user.email,
+        full_name=user.full_name or user.email,
+        code=code,
+    )
+    return {"message": "Код отправлен повторно"}
