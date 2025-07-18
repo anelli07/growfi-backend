@@ -2,7 +2,7 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - growfi-api
+name: Build and deploy Python app to Azure Web App - growfi-backend
 
 on:
   push:
@@ -48,6 +48,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    
     permissions:
       id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
@@ -65,14 +66,14 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FE716DEA2FA448D090D1A034278563BC }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2BB475C2565447BC81C7FA60B0073B6C }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8646F7FB14FC45E187226D28149A5145 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BE2FA35AACAD4A9CB1ABDDA559BF35E2 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E8C9973515624E4084AE6C259D7F677A }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DFFF4B6206894BF1B1A0D202DEAC5798 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'growfi-api'
+          app-name: 'growfi-backend'
           slot-name: 'Production'
           
